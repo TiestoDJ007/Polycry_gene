@@ -8,7 +8,7 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <cmath>
-#include <eigen3/Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/SVD>
 
 using namespace std;
@@ -178,10 +178,10 @@ int main() {
     string radius_text;
     ifstream read_STPOLY;
     read_STPOLY.open("n100-id1.stpoly", ios::in);
-    MatrixXd radius_MAX_array(seed_number, 1);
+    MatrixXd radius_MAX_array(1, seed_number);
     for (int number_radius = 0; number_radius < seed_number; ++number_radius) {
         getline(read_STPOLY, radius_text);
-        radius_MAX_array(number_radius, 0) = stod(radius_text);
+        radius_MAX_array(0, number_radius) = stod(radius_text);
     }
     cout.precision(15);
     //cout<<fixed<<radius_MAX_array<<endl;
@@ -211,9 +211,14 @@ int main() {
             0, 1, 0,
             0, 0, 1;
 
-    int choosing_polyhedron = 0;
+
+    //对区域 “0” 进行实验
+    //选取镶嵌0的区域
+    int choosing_polyhedron = 50;
+    double lattice_parameter = 3.6149;
     vector<int> poly_chosen = polyhedron_faces[choosing_polyhedron];
-    double radius = radius_MAX_array(choosing_polyhedron);
+    double radius = radius_MAX_array(0,choosing_polyhedron);
+
     MatrixXd centroid_points(1, 3);
     centroid_points << cell_centroid(choosing_polyhedron, 0),
             cell_centroid(choosing_polyhedron, 1),
@@ -223,7 +228,7 @@ int main() {
     cubic_vertex_array << centroid_points(0) - radius, centroid_points(1) - radius, centroid_points(2) - radius;
     //MatrixXd cubic_size(1,3);
     //cubic_size<<(int)radius*2/1,(int)radius*2/1,(int)radius*2/1;
-    int cubic_size = (int) radius * 2 / 1;
+    int cubic_size = (int) radius * 2 / lattice_parameter;
     int cubic_atoms_number = 0;
     MatrixXd cubic_atoms(cubic_size * cubic_size * cubic_size * 4, 3);
     for (int number_x = 0; number_x < cubic_size; ++number_x) {
@@ -237,9 +242,9 @@ int main() {
                     MatrixXd atom_position(1, 3);
                     atom_position = cart_position.transpose() + lattice_constant_array.row(number_lattice_array) +
                                     cubic_vertex_array;
-                    cubic_atoms(cubic_atoms_number, 0) = atom_position(0);
-                    cubic_atoms(cubic_atoms_number, 1) = atom_position(1);
-                    cubic_atoms(cubic_atoms_number, 2) = atom_position(2);
+                    cubic_atoms(cubic_atoms_number, 0) = atom_position(0, 0)*lattice_parameter;
+                    cubic_atoms(cubic_atoms_number, 1) = atom_position(0, 1)*lattice_parameter;
+                    cubic_atoms(cubic_atoms_number, 2) = atom_position(0, 2)*lattice_parameter;
                     cubic_atoms_number = cubic_atoms_number + 1;
                     //cout << atom_position << endl;
                 }
@@ -248,9 +253,56 @@ int main() {
     }
     //构建镶嵌区域内原子
 
-    double a;
-    a = Is_Point_In_Poly(face_equation_parameters.row(0), cubic_atoms.row(0));
-    cout << a << endl;
+    //double a;
+    //a = Is_Point_In_Poly(face_equation_parameters.row(0), cubic_atoms.row(0));
+    //cout << a << endl;
+    //对区域一进行实验
+    int face_tot_number = polyhedron_faces[choosing_polyhedron].size();
+    cout<<face_tot_number<<endl;
+    MatrixXi centroid_signal(1, face_tot_number);
+    for (int number_face = 0; number_face < face_tot_number; ++number_face) {
+        centroid_signal(0, number_face) = Is_Point_In_Poly(
+                face_equation_parameters.row(polyhedron_faces[choosing_polyhedron][number_face] - 1),
+                cell_centroid.row(choosing_polyhedron));
+    }
+    cout << centroid_signal << endl;
+    //使用判断原子和中心点在所有面的同一方向
+    //MatrixXd print_atom;
+    //Matrix<float, Dynamic, 3> xxx;
+    //print_atom.row(0) <<0,0,0;
+    int pre_atoms_tot_number = cubic_atoms.rows();
+    int atoms_number = 0;
+    vector<int> atoms_number_array;
+    for (int number_pre_atom = 0; number_pre_atom < pre_atoms_tot_number; ++number_pre_atom) {
+        MatrixXi atom_signal(1, face_tot_number);
+        for (int number_face = 0; number_face < face_tot_number; ++number_face) {
+            atom_signal(0, number_face) = Is_Point_In_Poly(
+                    face_equation_parameters.row(polyhedron_faces[choosing_polyhedron][number_face] - 1),
+                    cubic_atoms.row(number_pre_atom));
+        }
+        if (atom_signal == centroid_signal) {
+            atoms_number_array.push_back(number_pre_atom);
+            atoms_number++;
+        }
+    }
+    cout << pre_atoms_tot_number << endl;
+    cout << atoms_number << endl;
+    cout<<cubic_vertex_array(0,0)<<endl;
+    ofstream outdata;
+    outdata.precision(6);
+    outdata.open("test.dat", ios::out);
+    outdata << "Crystalline Cu atoms\n\n";
+    outdata << atoms_number << " atoms\n";
+    outdata << "1 atom types\n";
+    outdata << fixed<<cubic_vertex_array(0, 0) << " " << cubic_vertex_array(0, 0) + radius * 2 << " xlo xhi\n";
+    outdata << cubic_vertex_array(0, 1) << " " << cubic_vertex_array(0, 1) + radius * 2 << " ylo yhi\n";
+    outdata << cubic_vertex_array(0, 2) << " " << cubic_vertex_array(0, 2) + radius * 2 << " zlo zhi\n";
+    outdata << "\n";
+    outdata << "Atoms\n\n";
+    for (int number_atom = 0; number_atom < atoms_number; ++number_atom) {
+        outdata << number_atom + 1 << " 1 " << cubic_atoms.row(number_atom)<<"\n";
+    }
+    outdata.close();
     return 0;
 
 
