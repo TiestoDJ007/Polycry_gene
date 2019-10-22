@@ -213,96 +213,105 @@ int main() {
 
 
     //对区域 “0” 进行实验
-    //选取镶嵌0的区域
-    int choosing_polyhedron = 50;
+    //#########选取镶嵌0的区域
+    int choosing_polyhedron = 0;
+    //#########设置晶格常数
     double lattice_parameter = 3.6149;
+    //#########初始化此镶嵌所对应的面
     vector<int> poly_chosen = polyhedron_faces[choosing_polyhedron];
-    double radius = radius_MAX_array(0,choosing_polyhedron);
-
+    cout << poly_chosen[5]<< endl;
+    //########选取此晶粒的等效半径
+    double radius = 25.0;
+    //double radius = radius_MAX_array(0, choosing_polyhedron);
+    //############选取中心点
     MatrixXd centroid_points(1, 3);
     centroid_points << cell_centroid(choosing_polyhedron, 0),
             cell_centroid(choosing_polyhedron, 1),
             cell_centroid(choosing_polyhedron, 2);
-    //cout << lattice_constant_array.row(1) << endl;
+    cout << centroid_points << endl;
+    //#############设置预生成晶粒顶点,其值为最小
     MatrixXd cubic_vertex_array(1, 3);
-    cubic_vertex_array << centroid_points(0) - radius, centroid_points(1) - radius, centroid_points(2) - radius;
-    //MatrixXd cubic_size(1,3);
-    //cubic_size<<(int)radius*2/1,(int)radius*2/1,(int)radius*2/1;
-    int cubic_size = (int) radius * 2 / lattice_parameter;
+    //cubic_vertex_array << centroid_points(0) - radius, centroid_points(1) - radius, centroid_points(2) - radius;
+    cubic_vertex_array<<0,0,0;
+    //#########计算所需立方体晶粒的分割次数
+    int cubic_size = (int) (radius * 2 / lattice_parameter);
+    cout << cubic_size << endl;
+    //##########计数循环次数
     int cubic_atoms_number = 0;
     MatrixXd cubic_atoms(cubic_size * cubic_size * cubic_size * 4, 3);
     for (int number_x = 0; number_x < cubic_size; ++number_x) {
         for (int number_y = 0; number_y < cubic_size; ++number_y) {
             for (int number_z = 0; number_z < cubic_size; ++number_z) {
+                //#######循环到所在的分格点
                 MatrixXd base_position(1, 3);
                 base_position << number_x, number_y, number_z;
-                Vector3d cart_position = cell_martix * base_position.transpose();
-                //cout<<cart_position.transpose()<<endl;
+                //#######换算成实际晶格所在基点
+                MatrixXd cart_position(1, 3);
+                cart_position = (cell_martix * base_position.transpose()).transpose();
+                //cout << cart_position << " ";
+                //##########生成实际预设原子位置
                 for (int number_lattice_array = 0; number_lattice_array < 4; ++number_lattice_array) {
                     MatrixXd atom_position(1, 3);
-                    atom_position = cart_position.transpose() + lattice_constant_array.row(number_lattice_array) +
-                                    cubic_vertex_array;
-                    cubic_atoms(cubic_atoms_number, 0) = atom_position(0, 0)*lattice_parameter;
-                    cubic_atoms(cubic_atoms_number, 1) = atom_position(0, 1)*lattice_parameter;
-                    cubic_atoms(cubic_atoms_number, 2) = atom_position(0, 2)*lattice_parameter;
+                    atom_position =
+                            (cart_position + lattice_constant_array.row(number_lattice_array)) * lattice_parameter;
+                    cubic_atoms.row(cubic_atoms_number) = atom_position + cubic_vertex_array;
                     cubic_atoms_number = cubic_atoms_number + 1;
-                    //cout << atom_position << endl;
+                    //cout << atom_position << "\n";
                 }
+                //cout << endl;
             }
         }
     }
     //构建镶嵌区域内原子
-
-    //double a;
-    //a = Is_Point_In_Poly(face_equation_parameters.row(0), cubic_atoms.row(0));
-    //cout << a << endl;
     //对区域一进行实验
-    int face_tot_number = polyhedron_faces[choosing_polyhedron].size();
-    cout<<face_tot_number<<endl;
+    int face_tot_number = poly_chosen.size();
+    //##########计算中线点判断特征
     MatrixXi centroid_signal(1, face_tot_number);
     for (int number_face = 0; number_face < face_tot_number; ++number_face) {
         centroid_signal(0, number_face) = Is_Point_In_Poly(
-                face_equation_parameters.row(polyhedron_faces[choosing_polyhedron][number_face] - 1),
+                face_equation_parameters.row(poly_chosen[number_face] - 1),
                 cell_centroid.row(choosing_polyhedron));
     }
     cout << centroid_signal << endl;
     //使用判断原子和中心点在所有面的同一方向
-    //MatrixXd print_atom;
-    //Matrix<float, Dynamic, 3> xxx;
-    //print_atom.row(0) <<0,0,0;
     int pre_atoms_tot_number = cubic_atoms.rows();
+    cout << pre_atoms_tot_number << endl;
     int atoms_number = 0;
     vector<int> atoms_number_array;
     for (int number_pre_atom = 0; number_pre_atom < pre_atoms_tot_number; ++number_pre_atom) {
         MatrixXi atom_signal(1, face_tot_number);
         for (int number_face = 0; number_face < face_tot_number; ++number_face) {
             atom_signal(0, number_face) = Is_Point_In_Poly(
-                    face_equation_parameters.row(polyhedron_faces[choosing_polyhedron][number_face] - 1),
+                    face_equation_parameters.row(poly_chosen[number_face] - 1),
                     cubic_atoms.row(number_pre_atom));
         }
+        //cout<<atom_signal<<endl;
         if (atom_signal == centroid_signal) {
             atoms_number_array.push_back(number_pre_atom);
             atoms_number++;
         }
     }
-    cout << pre_atoms_tot_number << endl;
+    //cout << pre_atoms_tot_number << endl;
     cout << atoms_number << endl;
-    cout<<cubic_vertex_array(0,0)<<endl;
+    //cout<<cubic_vertex_array(0,0)<<endl;
     ofstream outdata;
     outdata.precision(6);
     outdata.open("test.dat", ios::out);
     outdata << "Crystalline Cu atoms\n\n";
     outdata << atoms_number << " atoms\n";
     outdata << "1 atom types\n";
-    outdata << fixed<<cubic_vertex_array(0, 0) << " " << cubic_vertex_array(0, 0) + radius * 2 << " xlo xhi\n";
+    outdata << fixed << cubic_vertex_array(0, 0) << " " << cubic_vertex_array(0, 0) + radius * 2 << " xlo xhi\n";
     outdata << cubic_vertex_array(0, 1) << " " << cubic_vertex_array(0, 1) + radius * 2 << " ylo yhi\n";
     outdata << cubic_vertex_array(0, 2) << " " << cubic_vertex_array(0, 2) + radius * 2 << " zlo zhi\n";
     outdata << "\n";
     outdata << "Atoms\n\n";
     for (int number_atom = 0; number_atom < atoms_number; ++number_atom) {
-        outdata << number_atom + 1 << " 1 " << cubic_atoms.row(number_atom)<<"\n";
+        outdata << number_atom + 1 << " 1 " << cubic_atoms.row(atoms_number_array[number_atom]) << "\n";
     }
     outdata.close();
+
+
+    cout<<face_equation_parameters<<endl;
     return 0;
 
 
@@ -317,10 +326,10 @@ vector<string> split(const string &str, const string &pattern) {
 }
 
 int Is_Point_In_Poly(const Ref<const MatrixXd> para, const Ref<const MatrixXd> point) {
-    double distance = para(0, 0) * point(0, 0) +
-                      para(0, 1) * point(0, 1) +
-                      para(0, 2) * point(0, 2) -
-                      para(0, 3);
+    double distance = para(0, 1) * point(0, 0) +
+                      para(0, 2) * point(0, 1) +
+                      para(0, 3) * point(0, 2) -
+                      para(0, 0);
     if (distance > 0)
         return 1;
     else
