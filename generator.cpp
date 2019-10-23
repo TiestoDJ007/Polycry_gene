@@ -10,6 +10,7 @@
 #include <cmath>
 //#include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/SVD>
+#include <eigen3/Eigen/Geometry>
 
 using namespace std;
 using namespace boost;
@@ -26,6 +27,9 @@ vector<string> split(const string &str, const string &pattern);
 
 
 int Is_Point_In_Poly(const Ref<const MatrixXd> para, const Ref<const MatrixXd> point);
+
+Matrix3d
+Rotation_Matrix(const Ref<const MatrixXd> Q);
 
 
 int main() {
@@ -151,6 +155,8 @@ int main() {
         }
     }
     read_TESS.close();
+
+
     string polyhedron_face_text;
     vector<vector<int >> polyhedron_faces;
     read_TESS.open("n100-id1.tess", ios::in);
@@ -183,8 +189,28 @@ int main() {
         getline(read_STPOLY, radius_text);
         radius_MAX_array(0, number_radius) = stod(radius_text);
     }
-    cout.precision(15);
+    read_STPOLY.close();
+    //cout.precision(15);
     //cout<<fixed<<radius_MAX_array<<endl;
+    //######读取四元数##############
+    string quaternion_text;
+    ifstream read_ORI;
+    read_ORI.open("n100-id1.ori", ios::in);
+    MatrixXd quaternion_array(seed_number, 4);
+    for (int number_ori = 0; number_ori < seed_number; ++number_ori) {
+        getline(read_ORI, quaternion_text);
+        vector<string> quaternion_test_split = split(quaternion_text, " ");
+        quaternion_array.row(number_ori) << stod(quaternion_test_split[0]), stod(quaternion_test_split[1]), stod(
+                quaternion_test_split[2]), stod(quaternion_test_split[3]);
+    }
+    read_ORI.close();
+    //cout<<quaternion_array<<endl;
+    //Quaterniond q ;
+    //Vector4d v(quaternion_array(1,0),quaternion_array(1,1),quaternion_array(1,2),quaternion_array(1,3));
+    //q=Vector4d (quaternion_array(1,0),quaternion_array(1,1),quaternion_array(1,2),quaternion_array(1,3));
+    //Matrix3d R ;
+    //R = Matrix3d(q);
+    //cout<<R<<endl;
     //读取文件完毕
 
 
@@ -214,28 +240,35 @@ int main() {
 
     //对区域 “0” 进行实验
     //#########选取镶嵌0的区域
-    int choosing_polyhedron = 0;
+    int choosing_polyhedron = 1;
     //#########设置晶格常数
     double lattice_parameter = 3.6149;
     //#########初始化此镶嵌所对应的面
     vector<int> poly_chosen = polyhedron_faces[choosing_polyhedron];
-    cout << poly_chosen[5]<< endl;
+    cout << poly_chosen[5] << endl;
     //########选取此晶粒的等效半径
     double radius = 25.0;
     //double radius = radius_MAX_array(0, choosing_polyhedron);
     //############选取中心点
-    MatrixXd centroid_points(1, 3);
-    centroid_points << cell_centroid(choosing_polyhedron, 0),
-            cell_centroid(choosing_polyhedron, 1),
-            cell_centroid(choosing_polyhedron, 2);
-    cout << centroid_points << endl;
     //#############设置预生成晶粒顶点,其值为最小
     MatrixXd cubic_vertex_array(1, 3);
-    //cubic_vertex_array << centroid_points(0) - radius, centroid_points(1) - radius, centroid_points(2) - radius;
-    cubic_vertex_array<<0,0,0;
+    cubic_vertex_array << cell_centroid(choosing_polyhedron, 0) - radius, cell_centroid(choosing_polyhedron, 1) -
+                                                                          radius,
+            cell_centroid(choosing_polyhedron, 2) - radius;
+    //cubic_vertex_array << 0, 0, 0;
     //#########计算所需立方体晶粒的分割次数
     int cubic_size = (int) (radius * 2 / lattice_parameter);
-    cout << cubic_size << endl;
+    //cout << cubic_size << endl;
+    //##############晶粒的中心点
+    MatrixXd cubic_centroid(1, 3);
+    cubic_centroid << radius, radius, radius;
+    //##########计算旋转矩阵
+    Matrix3d rotation_Matrix;
+    Quaterniond quaternion(quaternion_array(choosing_polyhedron, 0),
+                           quaternion_array(choosing_polyhedron, 1),
+                           quaternion_array(choosing_polyhedron, 2),
+                           quaternion_array(choosing_polyhedron, 3));
+    rotation_Matrix = Matrix3d(quaternion);
     //##########计数循环次数
     int cubic_atoms_number = 0;
     MatrixXd cubic_atoms(cubic_size * cubic_size * cubic_size * 4, 3);
@@ -254,7 +287,15 @@ int main() {
                     MatrixXd atom_position(1, 3);
                     atom_position =
                             (cart_position + lattice_constant_array.row(number_lattice_array)) * lattice_parameter;
-                    cubic_atoms.row(cubic_atoms_number) = atom_position + cubic_vertex_array;
+                    //另预生成原子群的中心为旋转中心，并计算出原子对应的旋转矢量
+                    MatrixXd atom_vector(1, 3);
+                    atom_vector = atom_position - cubic_centroid;
+                    //##############求得原子旋转后矢量
+                    MatrixXd atom_vector_rotation(1, 3);
+                    atom_vector_rotation = (rotation_Matrix * atom_vector.transpose()).transpose();
+                    //################真实原子坐标
+                    cubic_atoms.row(cubic_atoms_number) = atom_vector_rotation + cubic_centroid + cubic_vertex_array;
+                    //############计数原子个数
                     cubic_atoms_number = cubic_atoms_number + 1;
                     //cout << atom_position << "\n";
                 }
@@ -310,8 +351,6 @@ int main() {
     }
     outdata.close();
 
-
-    cout<<face_equation_parameters<<endl;
     return 0;
 
 
