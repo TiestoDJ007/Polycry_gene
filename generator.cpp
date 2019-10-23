@@ -229,13 +229,14 @@ int main() {
     //#########设置晶格常数
     double lattice_parameter = 3.6149;
     //#############初始化实际原子位置容器
-    vector<MatrixXd> atoms_position;
+    vector<vector<double >> atoms_position;
     //开始添加原子
     for (int number_poly = 0; number_poly < seed_number; ++number_poly) {
+
         //#########初始化此镶嵌所对应的面
         vector<int> poly_chosen = polyhedron_faces[number_poly];
         //########选取此晶粒的等效半径
-        double radius = 30.0;
+        double radius = 25.0;
         //#############设置预生成晶粒顶点,其值为最小
         MatrixXd cubic_vertex_array(1, 3);
         cubic_vertex_array << cell_centroid(number_poly, 0) - radius, cell_centroid(number_poly, 1) -
@@ -263,11 +264,10 @@ int main() {
                     //#######循环到所在的分格点
                     MatrixXd base_position(1, 3);
                     base_position << number_x, number_y, number_z;
-                    //#######换算成实际晶格所在基点
+                    //#######换算成预生成晶格所在坐标
                     MatrixXd cart_position(1, 3);
                     cart_position = (cell_martix * base_position.transpose()).transpose();
-                    //cout << cart_position << " ";
-                    //##########生成实际预设原子位置
+                    //##########生成实际预生成原子位置
                     for (int number_lattice_array = 0; number_lattice_array < 4; ++number_lattice_array) {
                         MatrixXd atom_position(1, 3);
                         atom_position =
@@ -283,9 +283,7 @@ int main() {
                                 atom_vector_rotation + cubic_centroid + cubic_vertex_array;
                         //############计数原子个数
                         cubic_atoms_number = cubic_atoms_number + 1;
-                        //cout << atom_position << "\n";
                     }
-                    //cout << endl;
                 }
             }
         }
@@ -301,7 +299,7 @@ int main() {
         }
         //使用判断原子和中心点在所有面的同一方向
         int pre_atoms_tot_number = cubic_atoms.rows();
-        int atoms_number = 0;
+        //int atoms_number = 0;
         for (int number_pre_atom = 0; number_pre_atom < pre_atoms_tot_number; ++number_pre_atom) {
             MatrixXi atom_signal(1, face_tot_number);
             for (int number_face = 0; number_face < face_tot_number; ++number_face) {
@@ -309,19 +307,23 @@ int main() {
                         face_equation_parameters.row(poly_chosen[number_face] - 1),
                         cubic_atoms.row(number_pre_atom));
             }
+            vector<double> back_result;
             if (atom_signal == centroid_signal) {
-                atoms_position.emplace_back(cubic_atoms.row(number_pre_atom));
-                atoms_number++;
+                back_result.emplace_back(number_poly + 1);
+                for (int number_back = 0; number_back < 3; ++number_back) {
+                    back_result.emplace_back(cubic_atoms(number_pre_atom, number_back));
+                }
+                atoms_position.emplace_back(back_result);
             }
         }
-        cout << atoms_number << endl;
+        cout << number_poly << endl;
     }
     ofstream outdata;
     outdata.precision(6);
     outdata.open("test.dat", ios::out);
     outdata << "Crystalline Cu atoms\n\n";
     outdata << atoms_position.size() << " atoms\n";
-    outdata << "1 atom types\n";
+    outdata << seed_number <<" atom types\n";
     outdata << fixed;
     outdata << "0" << " " << "50" << " xlo xhi\n";
     outdata << "0" << " " << "50" << " ylo yhi\n";
@@ -329,7 +331,11 @@ int main() {
     outdata << "\n";
     outdata << "Atoms\n\n";
     for (int number_atom = 0; number_atom < atoms_position.size(); ++number_atom) {
-        outdata << number_atom + 1 << " 1 " << atoms_position[number_atom] << "\n";
+        outdata << number_atom + 1<<" " << (int)atoms_position[number_atom][0] ;
+        for (int number_out = 1; number_out < 4; ++number_out) {
+            outdata << " "<<atoms_position[number_atom][number_out] ;
+        }
+        outdata<<endl;
     }
     outdata.close();
 
