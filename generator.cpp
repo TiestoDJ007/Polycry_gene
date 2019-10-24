@@ -77,12 +77,10 @@ int main() {
                 cell_centroid(number_seed, 0) = stod(cell_array_split[1]);
                 cell_centroid(number_seed, 1) = stod(cell_array_split[2]);
                 cell_centroid(number_seed, 2) = stod(cell_array_split[3]);
-                //cell_centroid(number_seed,0) = centroid_x;
-                //{centroid_x, centroid_y, centroid_z};
             }
         }
     }
-    //cout << cell_centroid << endl;
+
     read_TESS.close();
     string vertex_array;
     MatrixXd vertex_cartesian(vertex_number, 3);
@@ -102,8 +100,6 @@ int main() {
         }
     }
     read_TESS.close();
-    //cout << vertex_cartesian[1][1] << endl;
-
 
     string edge_array_text;
     MatrixXi edge_array(edge_number, 2);
@@ -121,8 +117,6 @@ int main() {
         }
     }
     read_TESS.close();
-    //cout << edge_array[1][1] << endl;
-
 
     string face_vertex_text;
     string face_equation_parameter_text;
@@ -152,7 +146,6 @@ int main() {
     }
     read_TESS.close();
 
-
     string polyhedron_face_text;
     vector<vector<int >> polyhedron_faces;
     read_TESS.open("n100-id1.tess", ios::in);
@@ -175,7 +168,6 @@ int main() {
         }
     }
     read_TESS.close();
-    //cout << polyhedron_faces[1][1] << endl;
     //读取最大半径
     string radius_text;
     ifstream read_STPOLY;
@@ -186,8 +178,6 @@ int main() {
         radius_MAX_array(0, number_radius) = stod(radius_text);
     }
     read_STPOLY.close();
-    //cout.precision(15);
-    //cout<<fixed<<radius_MAX_array<<endl;
     //######读取四元数##############
     string quaternion_text;
     ifstream read_ORI;
@@ -230,23 +220,15 @@ int main() {
     //#############初始化实际原子位置容器
     vector<vector<double >> atoms_position;
     //开始添加原子
-    for (int number_poly = 0; number_poly < seed_number; ++number_poly) {
+    int cout_number=1;
+    for (int number_poly = 18; number_poly < 19; ++number_poly) {
 
         //#########初始化此镶嵌所对应的面
         vector<int> poly_chosen = polyhedron_faces[number_poly];
         //########选取此晶粒的等效半径
         double radius = radius_MAX_array(0,number_poly);
-        //#############设置预生成晶粒顶点,其值为最小
-        //MatrixXd cubic_vertex_array(1, 3);
-        //cubic_vertex_array << cell_centroid(number_poly, 0) - radius, cell_centroid(number_poly, 1) -
-        //                                                              radius,
-        //        cell_centroid(number_poly, 2) - radius;
         //#########计算所需立方体晶粒的分割次数
         int cubic_size = radius / lattice_parameter;
-        //cout << cubic_size << endl;
-        //##############晶粒的中心点
-        //MatrixXd cubic_centroid(1, 3);
-        //cubic_centroid << radius, radius, radius;
         //##########计算旋转矩阵
         Matrix3d rotation_Matrix;
         Quaterniond quaternion(quaternion_array(number_poly, 0),
@@ -254,8 +236,6 @@ int main() {
                                quaternion_array(number_poly, 2),
                                quaternion_array(number_poly, 3));
         rotation_Matrix = Matrix3d(quaternion);
-        //##########计数循环次数
-        //int cubic_atoms_number = 0;
         vector<MatrixXd> cubic_atoms;
         for (int number_x = -cubic_size; number_x < cubic_size + 1; ++number_x) {
             for (int number_y = -cubic_size; number_y < cubic_size + 1; ++number_y) {
@@ -271,17 +251,9 @@ int main() {
                         MatrixXd atom_position(1, 3);
                         atom_position =
                                 (cart_position + lattice_constant_array.row(number_lattice_array)) * lattice_parameter;
-                        //另预生成原子群的中心为旋转中心，并计算出原子对应的旋转矢量
-                        //MatrixXd atom_vector(1, 3);
-                        //atom_vector = atom_position - cubic_centroid;
-                        //##############求得原子旋转后矢量
-                        //MatrixXd atom_vector_rotation(1, 3);
-                        //atom_vector_rotation = (rotation_Matrix * atom_position.transpose()).transpose();
                         //################真实原子坐标
                         cubic_atoms.emplace_back((rotation_Matrix * atom_position.transpose()).transpose() +
                                                  cell_centroid.row(number_poly));
-                        //############计数原子个数
-                        //cubic_atoms_number = cubic_atoms_number + 1;
                     }
                 }
             }
@@ -297,8 +269,6 @@ int main() {
                     cell_centroid.row(number_poly));
         }
         //使用判断原子和中心点在所有面的同一方向
-        //int pre_atoms_tot_number = cubic_atoms.rows();
-        //int atoms_number = 0;
         for (int number_pre_atom = 0; number_pre_atom < cubic_atoms.size(); ++number_pre_atom) {
             MatrixXi atom_signal(1, face_tot_number);
             for (int number_face = 0; number_face < face_tot_number; ++number_face) {
@@ -315,9 +285,8 @@ int main() {
                 atoms_position.emplace_back(back_result);
             }
         }
-        if (number_poly == 77) {
-            cout << face_tot_number << endl;
-        }
+        cout<<cout_number<<" "<<endl;
+        cout_number++;
     }
     ofstream outdata;
     outdata.precision(6);
@@ -326,9 +295,9 @@ int main() {
     outdata << atoms_position.size() << " atoms\n";
     outdata << seed_number << " atom types\n";
     outdata << fixed;
-    outdata << "0" << " " << "50" << " xlo xhi\n";
-    outdata << "0" << " " << "50" << " ylo yhi\n";
-    outdata << "0" << " " << "50" << " zlo zhi\n";
+    outdata << "0" << " " << "500" << " xlo xhi\n";
+    outdata << "0" << " " << "500" << " ylo yhi\n";
+    outdata << "0" << " " << "500" << " zlo zhi\n";
     outdata << "\n";
     outdata << "Atoms\n\n";
     for (int number_atom = 0; number_atom < atoms_position.size(); ++number_atom) {
@@ -339,10 +308,7 @@ int main() {
         outdata << endl;
     }
     outdata.close();
-
     return 0;
-
-
 }
 
 vector<string> split(const string &str, const string &pattern) {
