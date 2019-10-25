@@ -3,29 +3,16 @@
 //
 //polyhedron_faces无法使用eigen矩阵，因为长度相同。其他数据存储方式皆为eigen矩阵。
 #include <iostream>
-#include <string>
 #include <fstream>
-#include <vector>
-#include <boost/algorithm/string.hpp>
-#include <cmath>
-#include <eigen3/Eigen/SVD>
 #include <eigen3/Eigen/Geometry>
+#include "generator_algo.h"
 
-using namespace std;
-using namespace boost;
-using namespace Eigen;
 
 int seed_number;
 int vertex_number;
 int edge_number;
 int face_number;
 int polyhedron_number;
-
-
-vector<string> split(const string &str, const string &pattern);
-
-
-int Is_Point_In_Poly(const Ref<const MatrixXd> &para, const Ref<const MatrixXd> &point);
 
 
 int main() {
@@ -39,7 +26,6 @@ int main() {
     string face_text;
     string polyhedron_text;
     string skip_line_text;
-    int test = 0;
     while (getline(read_TESS, line_text)) {
         if (line_text == " **cell") {
             getline(read_TESS, cell_text);
@@ -61,7 +47,6 @@ int main() {
             getline(read_TESS, polyhedron_text);
             polyhedron_number = stoi(polyhedron_text, nullptr, 10);
         }
-        test = test + 1;
     }
     read_TESS.close();
 
@@ -121,7 +106,6 @@ int main() {
     string face_vertex_text;
     string face_equation_parameter_text;
     MatrixXi face_vertex_array(face_number, 3);
-    MatrixXd face_equation_parameters(face_number, 4);
     read_TESS.open("n100-id1.tess", ios::in);
     while (!read_TESS.eof()) {
         getline(read_TESS, line_text);
@@ -130,21 +114,26 @@ int main() {
             for (int number_face = 0; number_face < face_number; ++number_face) {
                 getline(read_TESS, face_vertex_text);
                 getline(read_TESS, skip_line_text);
-                getline(read_TESS, face_equation_parameter_text);
+                getline(read_TESS, skip_line_text);
                 getline(read_TESS, skip_line_text);
                 vector<string> face_vertex_text_split = split(face_vertex_text, " ");
-                face_vertex_array(number_face, 0) = stoi(face_vertex_text_split[1]);
-                face_vertex_array(number_face, 1) = stoi(face_vertex_text_split[2]);
-                face_vertex_array(number_face, 2) = stoi(face_vertex_text_split[3]);
-                vector<string> face_eq_para_split = split(face_equation_parameter_text, " ");
-                face_equation_parameters(number_face, 0) = stod(face_eq_para_split[0]);
-                face_equation_parameters(number_face, 1) = stod(face_eq_para_split[1]);
-                face_equation_parameters(number_face, 2) = stod(face_eq_para_split[2]);
-                face_equation_parameters(number_face, 3) = stod(face_eq_para_split[3]);
+                face_vertex_array(number_face, 0) = stoi(face_vertex_text_split[2]) - 1;
+                face_vertex_array(number_face, 1) = stoi(face_vertex_text_split[3]) - 1;
+                face_vertex_array(number_face, 2) = stoi(face_vertex_text_split[4]) - 1;
             }
         }
     }
     read_TESS.close();
+
+    vector<Matrix<double, 1, 4>> face_equation_parameters;
+    for (int i_fep = 0; i_fep < face_number; ++i_fep) {
+        face_equation_parameters.emplace_back(
+                Plane_Para(vertex_cartesian.row(face_vertex_array(i_fep, 0)),
+                           vertex_cartesian.row(face_vertex_array(i_fep, 1)),
+                           vertex_cartesian.row(face_vertex_array(i_fep, 2))));
+        //cout << i_fep << " ";
+        cout << i_fep << " " << face_equation_parameters[i_fep] << endl;
+    }
 
     string polyhedron_face_text;
     vector<vector<int >> polyhedron_faces;
@@ -205,6 +194,8 @@ int main() {
     //##################################################
 
     //fcc单位晶格
+    Matrix<double, 1, 3> cell_cen_test;
+    cell_cen_test << 57, 56, 460;
     MatrixXd lattice_constant_array(4, 3);
     lattice_constant_array << 0.0, 0.0, 0.0,
             0.5, 0.5, 0.0,
@@ -220,13 +211,13 @@ int main() {
     //#############初始化实际原子位置容器
     vector<vector<double >> atoms_position;
     //开始添加原子
-    int cout_number=1;
+    int cout_number = 1;
     for (int number_poly = 18; number_poly < 19; ++number_poly) {
 
         //#########初始化此镶嵌所对应的面
         vector<int> poly_chosen = polyhedron_faces[number_poly];
         //########选取此晶粒的等效半径
-        double radius = radius_MAX_array(0,number_poly);
+        double radius = radius_MAX_array(0, number_poly);
         //#########计算所需立方体晶粒的分割次数
         int cubic_size = radius / lattice_parameter;
         //##########计算旋转矩阵
@@ -253,7 +244,8 @@ int main() {
                                 (cart_position + lattice_constant_array.row(number_lattice_array)) * lattice_parameter;
                         //################真实原子坐标
                         cubic_atoms.emplace_back((rotation_Matrix * atom_position.transpose()).transpose() +
-                                                 cell_centroid.row(number_poly));
+                                                         cell_cen_test);
+                                                 //cell_centroid.row(number_poly));
                     }
                 }
             }
@@ -265,15 +257,16 @@ int main() {
         MatrixXi centroid_signal(1, face_tot_number);
         for (int number_face = 0; number_face < face_tot_number; ++number_face) {
             centroid_signal(0, number_face) = Is_Point_In_Poly(
-                    face_equation_parameters.row(poly_chosen[number_face] - 1),
-                    cell_centroid.row(number_poly));
+                    face_equation_parameters[poly_chosen[number_face] - 1],
+                    cell_cen_test);
+                    //cell_centroid.row(number_poly));
         }
         //使用判断原子和中心点在所有面的同一方向
         for (int number_pre_atom = 0; number_pre_atom < cubic_atoms.size(); ++number_pre_atom) {
             MatrixXi atom_signal(1, face_tot_number);
             for (int number_face = 0; number_face < face_tot_number; ++number_face) {
                 atom_signal(0, number_face) = Is_Point_In_Poly(
-                        face_equation_parameters.row(poly_chosen[number_face] - 1),
+                        face_equation_parameters[poly_chosen[number_face] - 1],
                         cubic_atoms[number_pre_atom]);
             }
             vector<double> back_result;
@@ -285,7 +278,7 @@ int main() {
                 atoms_position.emplace_back(back_result);
             }
         }
-        cout<<cout_number<<" "<<endl;
+        cout << cout_number << " ";
         cout_number++;
     }
     ofstream outdata;
@@ -308,24 +301,7 @@ int main() {
         outdata << endl;
     }
     outdata.close();
+    cout << endl;
     return 0;
 }
 
-vector<string> split(const string &str, const string &pattern) {
-    vector<string> result;
-    int position_start = str.find_first_not_of(pattern);
-    string new_str = str.substr(position_start, str.size());
-    split(result, new_str, is_any_of(pattern), token_compress_on);
-    return result;
-}
-
-int Is_Point_In_Poly(const Ref<const MatrixXd> &para, const Ref<const MatrixXd> &point) {
-    double distance = para(0, 1) * point(0, 0) +
-                      para(0, 2) * point(0, 1) +
-                      para(0, 3) * point(0, 2) -
-                      para(0, 0);
-    if (distance >= 0)
-        return 1;
-    else
-        return -1;
-}
