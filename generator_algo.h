@@ -16,7 +16,7 @@ using namespace std;
 using namespace boost;
 using namespace Eigen;
 
-const double EPSILON = 0.0000001;
+const double EPSILON = 0.1;
 
 bool Check_In_Plane(const Ref<MatrixXd> &para, const Ref<MatrixXd> &point);
 

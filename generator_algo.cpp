@@ -9,8 +9,9 @@ bool Check_In_Plane(const Ref<MatrixXd> &para, const Ref<MatrixXd> &point) {
                     para(0, 2) * point(0, 1) +
                     para(0, 3) * point(0, 2) -
                     para(0, 0);
-    return result <= EPSILON;
+    return abs(result) <= EPSILON;
 }
+
 
 vector<string> split(const string &str, const string &pattern) {
     vector<string> result;
@@ -52,4 +53,5 @@ int Is_Point_In_Poly(const Ref<const MatrixXd> &para, const Ref<const MatrixXd> 
     else
         return -1;
 }
+
 

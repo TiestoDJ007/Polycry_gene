@@ -18,7 +18,6 @@ int polyhedron_number;
 int main() {
     //读取.tess文件
     ifstream read_TESS;
-    read_TESS.open("n100-id1.tess", ios::in);
     string line_text;
     string cell_text;
     string vertex_text;
@@ -26,6 +25,7 @@ int main() {
     string face_text;
     string polyhedron_text;
     string skip_line_text;
+    read_TESS.open("n100-id1.tess", ios::in);
     while (getline(read_TESS, line_text)) {
         if (line_text == " **cell") {
             getline(read_TESS, cell_text);
@@ -68,7 +68,7 @@ int main() {
 
     read_TESS.close();
     string vertex_array;
-    MatrixXd vertex_cartesian(vertex_number, 3);
+    vector<Vector3d> vertex_points;
     read_TESS.open("n100-id1.tess", ios::in);
     while (!read_TESS.eof()) {
         getline(read_TESS, line_text);
@@ -77,9 +77,9 @@ int main() {
             for (int number_vertex = 0; number_vertex < vertex_number; number_vertex++) {
                 getline(read_TESS, vertex_array);
                 vector<string> vertex_array_split = split(vertex_array, " ");
-                vertex_cartesian(number_vertex, 0) = stod(vertex_array_split[1]);
-                vertex_cartesian(number_vertex, 1) = stod(vertex_array_split[2]);
-                vertex_cartesian(number_vertex, 2) = stod(vertex_array_split[3]);
+                Vector3d vertex_back;
+                vertex_back << stod(vertex_array_split[1]), stod(vertex_array_split[2]), stod(vertex_array_split[3]);
+                vertex_points.emplace_back(vertex_back);
 
             }
         }
@@ -128,11 +128,9 @@ int main() {
     vector<Matrix<double, 1, 4>> face_equation_parameters;
     for (int i_fep = 0; i_fep < face_number; ++i_fep) {
         face_equation_parameters.emplace_back(
-                Plane_Para(vertex_cartesian.row(face_vertex_array(i_fep, 0)),
-                           vertex_cartesian.row(face_vertex_array(i_fep, 1)),
-                           vertex_cartesian.row(face_vertex_array(i_fep, 2))));
-        //cout << i_fep << " ";
-        cout << i_fep << " " << face_equation_parameters[i_fep] << endl;
+                Plane_Para(vertex_points[face_vertex_array(i_fep, 0)].transpose(),
+                           vertex_points[face_vertex_array(i_fep, 1)].transpose(),
+                           vertex_points[face_vertex_array(i_fep, 2)].transpose()));
     }
 
     string polyhedron_face_text;
@@ -147,7 +145,7 @@ int main() {
                 vector<string> polyhedron_text_split = split(polyhedron_face_text, " ");
                 vector<int> face_list;
                 int polyhedron_faces_number = polyhedron_text_split.size();
-                for (int number_polyhedron_face = 1;
+                for (int number_polyhedron_face = 2;
                      number_polyhedron_face < polyhedron_faces_number; ++number_polyhedron_face) {
                     int face_list_element = abs(stoi(polyhedron_text_split[number_polyhedron_face]));
                     face_list.push_back(face_list_element);
@@ -157,14 +155,22 @@ int main() {
         }
     }
     read_TESS.close();
-    //读取最大半径
-    string radius_text;
+    //读取最大半径并且读取多面体顶点组合
+    string stpoly_file_string;
     ifstream read_STPOLY;
     read_STPOLY.open("n100-id1.stpoly", ios::in);
     MatrixXd radius_MAX_array(1, seed_number);
-    for (int number_radius = 0; number_radius < seed_number; ++number_radius) {
-        getline(read_STPOLY, radius_text);
-        radius_MAX_array(0, number_radius) = stod(radius_text);
+    vector<vector<int >> polyhedron_vertex;
+    for (int number_line = 0; number_line < seed_number; ++number_line) {
+        getline(read_STPOLY, stpoly_file_string);
+        vector<string> stpoly_file_split = split(stpoly_file_string, " ");
+        radius_MAX_array(0, number_line) = stod(stpoly_file_split[0]);
+        int vertex_num = (int) stpoly_file_split.size();
+        vector<int> vertex_push_back;
+        for (int i_vertex = 1; i_vertex < vertex_num; ++i_vertex) {
+            vertex_push_back.emplace_back(stoi(stpoly_file_split[i_vertex]) - 1); //减1是为了与读取的顶点容器编号相匹配
+        }
+        polyhedron_vertex.emplace_back(vertex_push_back);
     }
     read_STPOLY.close();
     //######读取四元数##############
@@ -194,8 +200,8 @@ int main() {
     //##################################################
 
     //fcc单位晶格
-    Matrix<double, 1, 3> cell_cen_test;
-    cell_cen_test << 57, 56, 460;
+    //Matrix<double, 1, 3> cell_cen_test;
+    //cell_cen_test << 57, 56, 460;
     MatrixXd lattice_constant_array(4, 3);
     lattice_constant_array << 0.0, 0.0, 0.0,
             0.5, 0.5, 0.0,
@@ -207,7 +213,7 @@ int main() {
             0, 1, 0,
             0, 0, 1;
     //#########设置晶格常数
-    double lattice_parameter = 3.6149;
+    double lattice_parameter = 0.8;
     //#############初始化实际原子位置容器
     vector<vector<double >> atoms_position;
     //开始添加原子
@@ -219,7 +225,7 @@ int main() {
         //########选取此晶粒的等效半径
         double radius = radius_MAX_array(0, number_poly);
         //#########计算所需立方体晶粒的分割次数
-        int cubic_size = radius / lattice_parameter;
+        int cubic_size = 2 * radius / lattice_parameter;
         //##########计算旋转矩阵
         Matrix3d rotation_Matrix;
         Quaterniond quaternion(quaternion_array(number_poly, 0),
@@ -244,43 +250,57 @@ int main() {
                                 (cart_position + lattice_constant_array.row(number_lattice_array)) * lattice_parameter;
                         //################真实原子坐标
                         cubic_atoms.emplace_back((rotation_Matrix * atom_position.transpose()).transpose() +
-                                                         cell_cen_test);
-                                                 //cell_centroid.row(number_poly));
+                                                 cell_centroid.row(number_poly));
                     }
                 }
             }
         }
+        //预生成原子总个数
+        int pre_atoms_tot = cubic_atoms.size();
+        //cout << pre_atoms_tot << endl;
+        //所选多面体面总数
+        int poly_face_tot = polyhedron_faces[number_poly].size();
+        //所选镶嵌顶点数
+        int poly_vertex_tot = polyhedron_vertex[number_poly].size();
+        //构建镶嵌顶点坐标组
+        MatrixXd poly_chosen_vertex(polyhedron_vertex[number_poly].size(), 3);
+        for (int number_poly_vertex = 0; number_poly_vertex < poly_vertex_tot; ++number_poly_vertex) {
+            poly_chosen_vertex.row(number_poly_vertex)
+                    << vertex_points[polyhedron_vertex[number_poly][number_poly_vertex]].transpose();
+        }
+        //选取多面体极值
+        double min_x_poly = poly_chosen_vertex.col(0).minCoeff();
+        double max_x_poly = poly_chosen_vertex.col(0).maxCoeff();
+        double min_y_poly = poly_chosen_vertex.col(1).minCoeff();
+        double max_y_poly = poly_chosen_vertex.col(1).maxCoeff();
+        double min_z_poly = poly_chosen_vertex.col(2).minCoeff();
+        double max_z_poly = poly_chosen_vertex.col(2).maxCoeff();
+        //cout << "min_x_poly = " << min_x_poly << "\n";
+        //cout << "max_x_poly = " << max_x_poly << "\n";
+        //cout << "min_y_poly = " << min_y_poly << "\n";
+        //cout << "max_y_poly = " << max_y_poly << "\n";
+        //cout << "min_z_poly = " << min_z_poly << "\n";
+        //cout << "max_z_poly = " << max_z_poly << endl;
         //构建镶嵌区域内原子
-        //对区域一进行实验
-        int face_tot_number = poly_chosen.size();
-        //##########计算中线点判断特征
-        MatrixXi centroid_signal(1, face_tot_number);
-        for (int number_face = 0; number_face < face_tot_number; ++number_face) {
-            centroid_signal(0, number_face) = Is_Point_In_Poly(
-                    face_equation_parameters[poly_chosen[number_face] - 1],
-                    cell_cen_test);
-                    //cell_centroid.row(number_poly));
-        }
-        //使用判断原子和中心点在所有面的同一方向
-        for (int number_pre_atom = 0; number_pre_atom < cubic_atoms.size(); ++number_pre_atom) {
-            MatrixXi atom_signal(1, face_tot_number);
-            for (int number_face = 0; number_face < face_tot_number; ++number_face) {
-                atom_signal(0, number_face) = Is_Point_In_Poly(
-                        face_equation_parameters[poly_chosen[number_face] - 1],
-                        cubic_atoms[number_pre_atom]);
-            }
-            vector<double> back_result;
-            if (atom_signal == centroid_signal) {
-                back_result.emplace_back(number_poly + 1);
-                for (int number_back = 0; number_back < 3; ++number_back) {
-                    back_result.emplace_back(cubic_atoms[number_pre_atom](0, number_back));
+        for (int number_atom = 0; number_atom < pre_atoms_tot; ++number_atom) {
+            MatrixXd atom;
+            atom = cubic_atoms[number_atom];
+            //cout<<atom<<endl;
+            if (min_x_poly < atom(0, 0) && atom(0, 0) < max_x_poly &&
+                min_y_poly < atom(0, 1) && atom(0, 1) < max_y_poly &&
+                min_z_poly < atom(0, 2) && atom(0, 2) < max_z_poly) {
+                int cross_number = 0;
+                for (int number_face = 0; number_face < poly_face_tot; ++number_face) {
+                    if(Check_In_Plane(face_equation_parameters[poly_chosen[number_face]-1],atom)){
+                        vector<double> back ={(double)number_poly,atom(0,0),atom(0,1),atom(0,2)};
+                        atoms_position.emplace_back(back);
+                    }
                 }
-                atoms_position.emplace_back(back_result);
             }
         }
-        cout << cout_number << " ";
-        cout_number++;
+
     }
+
     ofstream outdata;
     outdata.precision(6);
     outdata.open("test.dat", ios::out);
@@ -288,9 +308,9 @@ int main() {
     outdata << atoms_position.size() << " atoms\n";
     outdata << seed_number << " atom types\n";
     outdata << fixed;
-    outdata << "0" << " " << "500" << " xlo xhi\n";
-    outdata << "0" << " " << "500" << " ylo yhi\n";
-    outdata << "0" << " " << "500" << " zlo zhi\n";
+    outdata << "0" << " " << "100" << " xlo xhi\n";
+    outdata << "0" << " " << "100" << " ylo yhi\n";
+    outdata << "0" << " " << "100" << " zlo zhi\n";
     outdata << "\n";
     outdata << "Atoms\n\n";
     for (int number_atom = 0; number_atom < atoms_position.size(); ++number_atom) {
@@ -301,7 +321,7 @@ int main() {
         outdata << endl;
     }
     outdata.close();
-    cout << endl;
+
     return 0;
 }
 
