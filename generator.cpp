@@ -15,12 +15,6 @@ using namespace std;
 using namespace boost;
 using namespace Eigen;
 
-int seed_number;
-int vertex_number;
-int edge_number;
-int face_number;
-int polyhedron_number;
-
 
 vector<string> split(const string &str, const string &pattern);
 
@@ -29,6 +23,11 @@ int Is_Point_In_Poly(const Ref<const MatrixXd> &para, const Ref<const MatrixXd> 
 
 
 int main() {
+    int seed_number = 0;
+    int vertex_number = 0;
+    int edge_number = 0;
+    int face_number = 0;
+    int polyhedron_number = 0;
     //读取.tess文件
     ifstream read_TESS;
     read_TESS.open("n100-id1.tess", ios::in);
@@ -158,7 +157,7 @@ int main() {
                 vector<string> polyhedron_text_split = split(polyhedron_face_text, " ");
                 vector<int> face_list;
                 int polyhedron_faces_number = polyhedron_text_split.size();
-                for (int number_polyhedron_face = 1;
+                for (int number_polyhedron_face = 2;
                      number_polyhedron_face < polyhedron_faces_number; ++number_polyhedron_face) {
                     int face_list_element = abs(stoi(polyhedron_text_split[number_polyhedron_face]));
                     face_list.push_back(face_list_element);
@@ -220,13 +219,13 @@ int main() {
     //#############初始化实际原子位置容器
     vector<vector<double >> atoms_position;
     //开始添加原子
-    int cout_number=1;
+    int cout_number = 1;
     for (int number_poly = 18; number_poly < 19; ++number_poly) {
 
         //#########初始化此镶嵌所对应的面
         vector<int> poly_chosen = polyhedron_faces[number_poly];
         //########选取此晶粒的等效半径
-        double radius = radius_MAX_array(0,number_poly);
+        double radius = radius_MAX_array(0, number_poly);
         //#########计算所需立方体晶粒的分割次数
         int cubic_size = radius / lattice_parameter;
         //##########计算旋转矩阵
@@ -285,7 +284,7 @@ int main() {
                 atoms_position.emplace_back(back_result);
             }
         }
-        cout<<cout_number<<" "<<endl;
+        cout << cout_number << " " << endl;
         cout_number++;
     }
     ofstream outdata;
