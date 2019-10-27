@@ -41,8 +41,8 @@ int main() {
     int test = 0;
     while (getline(read_TESS, line_text)) {
         if (line_text == " **cell") {
-            getline(read_TESS, cell_text);
-            seed_number = stoi(cell_text, nullptr, 10);
+            getline(read_TESS, line_text);
+            seed_number = stoi(line_text, nullptr, 10);
         }
         if (line_text == " **vertex") {
             getline(read_TESS, vertex_text);
