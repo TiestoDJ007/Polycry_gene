@@ -53,7 +53,4 @@ public:
 
 inline std::vector<std::string> split_string(const std::string &str, const std::string &pattern);
 
-inline double
-Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point);
-
 #endif //POLYCRY_GENE_RAY_FILE_FUNC_H

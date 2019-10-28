@@ -2,6 +2,7 @@
 // Created by a on 2019/10/27.
 //
 #include <cmath>
+#include <eigen3/Eigen/Geometry>
 #include "Ray_File_Func.h"
 #include <boost/algorithm/string.hpp>
 
@@ -194,7 +195,3 @@ inline std::vector<std::string> split_string(const std::string &str, const std::
     return result_str;
 }
 
-inline double
-Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point){
-
-}
