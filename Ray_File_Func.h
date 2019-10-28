@@ -49,6 +49,8 @@ public:
 
     std::vector<Eigen::Vector4d> poly_ori();
 
+    std::vector<std::vector<int >> poly_vertices();
+
 };
 
 inline std::vector<std::string> split_string(const std::string &str, const std::string &pattern);

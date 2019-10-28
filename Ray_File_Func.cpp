@@ -2,7 +2,6 @@
 // Created by a on 2019/10/27.
 //
 #include <cmath>
-#include <eigen3/Eigen/Geometry>
 #include "Ray_File_Func.h"
 #include <boost/algorithm/string.hpp>
 
@@ -97,7 +96,7 @@ std::vector<Eigen::Vector3d> Ray_File_Func::vertex_position() {
         getline(read_file, line_text);
         if (line_text == " **vertex") {
             getline(read_file, line_text);
-            for (int i_vertex = 0; i_vertex < cell_tot_; ++i_vertex) {
+            for (int i_vertex = 0; i_vertex < vertex_tot_; ++i_vertex) {
                 getline(read_file, line_text);
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 Eigen::Vector3d back_vector;
@@ -124,7 +123,7 @@ std::vector<std::vector<int >> Ray_File_Func::face_vertices() {
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 std::vector<int> line_back;
                 for (int i_vertex = 2; i_vertex < line_text_split.size(); ++i_vertex) {
-                    line_back.emplace_back(std::stoi(line_text_split[i_vertex]));
+                    line_back.emplace_back(std::stoi(line_text_split[i_vertex]) - 1);
                 }
                 return_data.emplace_back(line_back);
                 getline(read_file, line_text);
@@ -149,7 +148,7 @@ std::vector<std::vector<int >> Ray_File_Func::poly_faces() {
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 std::vector<int> line_back;
                 for (int i_face = 2; i_face < line_text_split.size(); ++i_face) {
-                    line_back.emplace_back(std::abs(std::stoi(line_text_split[i_face])));
+                    line_back.emplace_back(std::abs(std::stoi(line_text_split[i_face]) - 1));
                 }
                 return_data.emplace_back(line_back);
             }
@@ -164,7 +163,23 @@ std::vector<double> Ray_File_Func::poly_eqradius() {
     read_file.open(file_name_stopoly, std::ios::in);
     for (int i_radius = 0; i_radius < cell_tot_; ++i_radius) {
         getline(read_file, line_text);
-        return_data.emplace_back(std::stod(line_text));
+        return_data.emplace_back(std::stod(split_string(line_text, " ")[0]));
+    }
+    read_file.close();
+    return return_data;
+}
+
+std::vector<std::vector<int >> Ray_File_Func::poly_vertices() {
+    std::vector<std::vector<int >> return_data;
+    read_file.open(file_name_stopoly, std::ios::in);
+    for (int i_poly = 0; i_poly < cell_tot_; ++i_poly) {
+        getline(read_file, line_text);
+        std::vector<std::string> line_text_split = split_string(line_text, " ");
+        std::vector<int> line_back;
+        for (int i_ver = 1; i_ver < line_text_split.size(); ++i_ver) {
+            line_back.emplace_back(std::stoi(line_text_split[i_ver]) - 1);
+        }
+        return_data.emplace_back(line_back);
     }
     read_file.close();
     return return_data;
