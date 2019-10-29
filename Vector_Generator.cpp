@@ -24,16 +24,13 @@ typedef bg::model::point<double, 3, bg::cs::cartesian> Point;
 typedef std::pair<Point, int> Point_Index;
 typedef bg::model::box<Point> Box;
 
-inline double
-Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point);
-
 inline Vector4d Face_Para(const Ref<Vector3d> &point_1, const Ref<Vector3d> &point_2, const Ref<Vector3d> &point_3);
 
 inline bool Point_Signal(const Ref<Vector4d> &face_para, const Ref<Vector3d> &point);
 
 const double lattice_parameter = 3.6149;
 
-const double min_distance = 0.4 * lattice_parameter;
+const double min_distance = 0.425 * lattice_parameter;
 
 int main() {
 
@@ -196,17 +193,6 @@ int main() {
     return 0;
 }
 
-
-inline double
-Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point) {
-    return (face_para(0, 0) * point(0, 0) +
-            face_para(1, 0) * point(1, 0) +
-            face_para(2, 0) * point(2, 0) +
-            face_para(3, 0)) /
-           sqrt(face_para(0, 0) * face_para(0, 0) +
-                face_para(1, 0) * face_para(1, 0) +
-                face_para(2, 0) * face_para(2, 0));
-}
 
 inline Vector4d Face_Para(const Ref<Vector3d> &p_1, const Ref<Vector3d> &p_2, const Ref<Vector3d> &p_3) {
     Vector4d data_return;
