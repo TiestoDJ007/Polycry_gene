@@ -168,7 +168,7 @@ int main() {
 
     ofstream outdata;
     outdata.precision(6);
-    outdata.open("test_2.dat", ios::out);
+    outdata.open("Selected_Atoms.dat", ios::out);
     outdata << "Crystalline Cu atoms\n\n";
     outdata << atoms_outfile.size() << " atoms\n";
     outdata << cell_tot << " atom types\n";
