@@ -42,12 +42,12 @@ int main() {
     vector<Vector3d> cell_position = voro_info.cell_position();
     vector<Vector3d> vertex_position = voro_info.vertex_position();
     vector<vector<int >> face_vertices = voro_info.face_vertices();
-    cout<<face_vertices[1][0]<<endl;
+    //cout << face_vertices[1][0] << endl;
     vector<vector<int >> poly_faces = voro_info.poly_faces();
-    cout<<poly_faces[1][0]<<endl;
+    //cout << poly_faces[18][7] << endl;
     vector<double> poly_eqradius = voro_info.poly_eqradius();
     vector<vector<int >> poly_vertices = voro_info.poly_vertices();
-    cout<<poly_vertices[1][0]<<endl;
+    //cout << poly_vertices[1][0] << endl;
     vector<Vector4d> poly_ori = voro_info.poly_ori();
 
     vector<MatrixXd> face_vertex;
@@ -65,11 +65,11 @@ int main() {
                                          vertex_position[face_vertices[i_face][1]],
                                          vertex_position[face_vertices[i_face][2]]));
     }
-    cout<<face_para[5].transpose()<<endl;
+    //cout << face_para[5].transpose() << endl;
 
     vector<vector<double >> atoms_outfile;
 
-    for (int i_poly = 0; i_poly < 0; ++i_poly) {
+    for (int i_poly = 0; i_poly < cell_tot; ++i_poly) {
 
         int cubic_size = 2 * poly_eqradius[i_poly] / lattice_parameter;
 
@@ -119,8 +119,6 @@ int main() {
             Signal_point.row(i_face) << Point_Signal(face_para[poly_faces[i_poly][i_face]],
                                                      cell_position[i_poly]);
         }
-        cout << pre_cell_atoms.size() << endl;
-        cout << Signal_point.transpose() << endl;
 
         for (int i_atom = 0; i_atom < pre_cell_atoms.size(); ++i_atom) {
             VectorXi Atom_Signal(poly_faces[i_poly].size());
@@ -135,7 +133,6 @@ int main() {
                                                           pre_cell_atoms[i_atom](2, 0)});
         }
     }
-    cout << atoms_outfile.size() << endl;
     cout << (clock() - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << endl;
 
     ofstream outdata;
@@ -188,8 +185,8 @@ inline Vector4d Face_Para(const Ref<Vector3d> &p_1, const Ref<Vector3d> &p_2, co
 }
 
 inline bool Point_Signal(const Ref<Vector4d> &face_para, const Ref<Vector3d> &point) {
-    return (face_para(0, 0) * point(0, 0) +
+    return ((double) face_para(0, 0) * point(0, 0) +
             face_para(1, 0) * point(1, 0) +
             face_para(2, 0) * point(2, 0) +
-            face_para(3, 0)) > 0;
+            face_para(3, 0)) > 0.0;
 }

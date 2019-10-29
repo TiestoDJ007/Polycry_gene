@@ -148,7 +148,7 @@ std::vector<std::vector<int >> File_Func::poly_faces() {
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 std::vector<int> line_back;
                 for (int i_face = 2; i_face < line_text_split.size(); ++i_face) {
-                    line_back.emplace_back(std::abs(std::stoi(line_text_split[i_face]) - 1));
+                    line_back.emplace_back(std::abs(std::stoi(line_text_split[i_face])) - 1);
                 }
                 return_data.emplace_back(line_back);
             }
