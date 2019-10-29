@@ -2,12 +2,12 @@
 // Created by a on 2019/10/27.
 //
 #include <cmath>
-#include "Ray_File_Func.h"
+#include "File_Func.h"
 #include <boost/algorithm/string.hpp>
 
 std::ifstream read_file;
 
-Ray_File_Func::Ray_File_Func() {
+File_Func::File_Func() {
     cell_tot_ = 0;
     vertex_tot_ = 0;
     face_tot_ = 0;
@@ -17,8 +17,8 @@ Ray_File_Func::Ray_File_Func() {
     file_name_ori = "none_file_name";
 }
 
-Ray_File_Func::Ray_File_Func(const std::string &file_name_tess_, const std::string &file_name_stopoly_,
-                             const std::string &file_name_ori_) {
+File_Func::File_Func(const std::string &file_name_tess_, const std::string &file_name_stopoly_,
+                     const std::string &file_name_ori_) {
     file_name_tess = file_name_tess_;
     file_name_stopoly = file_name_stopoly_;
     file_name_ori = file_name_ori_;
@@ -48,27 +48,27 @@ Ray_File_Func::Ray_File_Func(const std::string &file_name_tess_, const std::stri
     read_file.close();
 }
 
-Ray_File_Func::~Ray_File_Func() {
+File_Func::~File_Func() {
 
 }
 
-int Ray_File_Func::cell_tot() {
+int File_Func::cell_tot() {
     return cell_tot_;
 }
 
-int Ray_File_Func::vertex_tot() {
+int File_Func::vertex_tot() {
     return vertex_tot_;
 }
 
-int Ray_File_Func::face_tot() {
+int File_Func::face_tot() {
     return face_tot_;
 }
 
-int Ray_File_Func::polyhedron_tot() {
+int File_Func::polyhedron_tot() {
     return polyhedron_tot_;
 }
 
-std::vector<Eigen::Vector3d> Ray_File_Func::cell_position() {
+std::vector<Eigen::Vector3d> File_Func::cell_position() {
     std::vector<Eigen::Vector3d> return_data;
     read_file.open(file_name_tess, std::ios::in);
     while (!read_file.eof()) {
@@ -89,7 +89,7 @@ std::vector<Eigen::Vector3d> Ray_File_Func::cell_position() {
     return return_data;
 }
 
-std::vector<Eigen::Vector3d> Ray_File_Func::vertex_position() {
+std::vector<Eigen::Vector3d> File_Func::vertex_position() {
     std::vector<Eigen::Vector3d> return_data;
     read_file.open(file_name_tess, std::ios::in);
     while (!read_file.eof()) {
@@ -111,7 +111,7 @@ std::vector<Eigen::Vector3d> Ray_File_Func::vertex_position() {
     return return_data;
 }
 
-std::vector<std::vector<int >> Ray_File_Func::face_vertices() {
+std::vector<std::vector<int >> File_Func::face_vertices() {
     std::vector<std::vector<int >> return_data;
     read_file.open(file_name_tess, std::ios::in);
     while (!read_file.eof()) {
@@ -136,7 +136,7 @@ std::vector<std::vector<int >> Ray_File_Func::face_vertices() {
     return return_data;
 }
 
-std::vector<std::vector<int >> Ray_File_Func::poly_faces() {
+std::vector<std::vector<int >> File_Func::poly_faces() {
     std::vector<std::vector<int >> return_data;
     read_file.open(file_name_tess, std::ios::in);
     while (!read_file.eof()) {
@@ -158,7 +158,7 @@ std::vector<std::vector<int >> Ray_File_Func::poly_faces() {
     return return_data;
 }
 
-std::vector<double> Ray_File_Func::poly_eqradius() {
+std::vector<double> File_Func::poly_eqradius() {
     std::vector<double> return_data;
     read_file.open(file_name_stopoly, std::ios::in);
     for (int i_radius = 0; i_radius < cell_tot_; ++i_radius) {
@@ -169,7 +169,7 @@ std::vector<double> Ray_File_Func::poly_eqradius() {
     return return_data;
 }
 
-std::vector<std::vector<int >> Ray_File_Func::poly_vertices() {
+std::vector<std::vector<int >> File_Func::poly_vertices() {
     std::vector<std::vector<int >> return_data;
     read_file.open(file_name_stopoly, std::ios::in);
     for (int i_poly = 0; i_poly < cell_tot_; ++i_poly) {
@@ -185,7 +185,7 @@ std::vector<std::vector<int >> Ray_File_Func::poly_vertices() {
     return return_data;
 }
 
-std::vector<Eigen::Vector4d> Ray_File_Func::poly_ori() {
+std::vector<Eigen::Vector4d> File_Func::poly_ori() {
     std::vector<Eigen::Vector4d> return_data;
     read_file.open(file_name_ori, std::ios::in);
     for (int i_poly = 0; i_poly < cell_tot_; ++i_poly) {

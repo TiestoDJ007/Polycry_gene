@@ -2,8 +2,8 @@
 // Created by a on 2019/10/27.
 //
 
-#ifndef POLYCRY_GENE_RAY_FILE_FUNC_H
-#define POLYCRY_GENE_RAY_FILE_FUNC_H
+#ifndef POLYCRY_GENE_FILE_FUNC_H
+#define POLYCRY_GENE_FILE_FUNC_H
 
 #include <vector>
 #include <string>
@@ -11,7 +11,7 @@
 #include <eigen3/Eigen/SVD>
 
 
-class Ray_File_Func {
+class File_Func {
 private:
     int cell_tot_;
     int vertex_tot_;
@@ -22,12 +22,12 @@ private:
     std::string file_name_stopoly;
     std::string file_name_ori;
 public:
-    Ray_File_Func();
+    File_Func();
 
-    Ray_File_Func(const std::string &file_name_tess_, const std::string &file_name_stopoly_,
-                  const std::string &file_name_ori_);
+    File_Func(const std::string &file_name_tess_, const std::string &file_name_stopoly_,
+              const std::string &file_name_ori_);
 
-    ~Ray_File_Func();
+    ~File_Func();
 
     int cell_tot();
 
@@ -55,4 +55,4 @@ public:
 
 inline std::vector<std::string> split_string(const std::string &str, const std::string &pattern);
 
-#endif //POLYCRY_GENE_RAY_FILE_FUNC_H
+#endif //POLYCRY_GENE_FILE_FUNC_H

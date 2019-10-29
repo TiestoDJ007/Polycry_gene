@@ -7,7 +7,7 @@
 //      -oridescriptor q
 #include <iostream>
 #include <eigen3/Eigen/Geometry>
-#include "Ray_File_Func.h"
+#include "File_Func.h"
 
 using namespace std;
 using namespace Eigen;
@@ -16,6 +16,8 @@ inline double
 Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point);
 
 inline Vector4d Face_Para(const Ref<Vector3d> &point_1, const Ref<Vector3d> &point_2, const Ref<Vector3d> &point_3);
+
+inline bool Point_Signal(const Ref<Vector4d> &face_para, const Ref<Vector3d> &point);
 
 int main() {
 
@@ -34,17 +36,18 @@ int main() {
             0, 1, 0,
             0, 0, 1;
 
-    Ray_File_Func voro_info("n100-id1.tess", "n100-id1.stpoly", "n100-id1.ori");
+    File_Func voro_info("n100-id1.tess", "n100-id1.stpoly", "n100-id1.ori");
 
     int cell_tot = voro_info.cell_tot();
-    int vertex_tot = voro_info.vertex_tot();
-    int face_tot = voro_info.face_tot();
     vector<Vector3d> cell_position = voro_info.cell_position();
     vector<Vector3d> vertex_position = voro_info.vertex_position();
     vector<vector<int >> face_vertices = voro_info.face_vertices();
+    cout<<face_vertices[1][0]<<endl;
     vector<vector<int >> poly_faces = voro_info.poly_faces();
+    cout<<poly_faces[1][0]<<endl;
     vector<double> poly_eqradius = voro_info.poly_eqradius();
     vector<vector<int >> poly_vertices = voro_info.poly_vertices();
+    cout<<poly_vertices[1][0]<<endl;
     vector<Vector4d> poly_ori = voro_info.poly_ori();
 
     vector<MatrixXd> face_vertex;
@@ -62,10 +65,11 @@ int main() {
                                          vertex_position[face_vertices[i_face][1]],
                                          vertex_position[face_vertices[i_face][2]]));
     }
+    cout<<face_para[5].transpose()<<endl;
 
     vector<vector<double >> atoms_outfile;
 
-    for (int i_poly = 18; i_poly < 19; ++i_poly) {
+    for (int i_poly = 0; i_poly < 0; ++i_poly) {
 
         int cubic_size = 2 * poly_eqradius[i_poly] / lattice_parameter;
 
@@ -97,7 +101,8 @@ int main() {
                     for (int i_lattice = 0; i_lattice < 4; ++i_lattice) {
                         Vector3d origin_atom;
                         origin_atom =
-                                rotation_Matrix * (cart_point + lattice_constant_array.row(i_lattice).transpose());
+                                rotation_Matrix * (cart_point + lattice_constant_array.row(i_lattice).transpose()) *
+                                lattice_parameter;
                         Vector3d return_atom = cell_position[i_poly] + origin_atom;
                         if (return_atom(0, 0) > min_x && return_atom(0, 0) < max_x &&
                             return_atom(1, 0) > min_y && return_atom(1, 0) < max_y &&
@@ -109,18 +114,50 @@ int main() {
             }
         }
 
-        for (int i_atom = 0; i_atom < pre_cell_atoms.size(); ++i_atom) {
-            int cross_val = 0;
-            for (int i_face = 0; i_face < poly_faces[i_poly].size(); ++i_face) {
-                double cross_point_z = (-face_para[poly_faces[i_poly][i_face]](0, 3) -
-                                        face_para[poly_faces[i_poly][i_face]](0, 0) * pre_cell_atoms[i_atom](0, 0) -
-                                        face_para[poly_faces[i_poly][i_face]](1, 0) * pre_cell_atoms[i_atom](1, 0)) /
-                                       face_para[poly_faces[i_poly][i_face]](2, 0);
+        VectorXi Signal_point(poly_faces[i_poly].size());
+        for (int i_face = 0; i_face < poly_faces[i_poly].size(); ++i_face) {
+            Signal_point.row(i_face) << Point_Signal(face_para[poly_faces[i_poly][i_face]],
+                                                     cell_position[i_poly]);
+        }
+        cout << pre_cell_atoms.size() << endl;
+        cout << Signal_point.transpose() << endl;
 
+        for (int i_atom = 0; i_atom < pre_cell_atoms.size(); ++i_atom) {
+            VectorXi Atom_Signal(poly_faces[i_poly].size());
+            for (int i_face = 0; i_face < poly_faces[i_poly].size(); ++i_face) {
+                Atom_Signal.row(i_face) << Point_Signal(face_para[poly_faces[i_poly][i_face]],
+                                                        pre_cell_atoms[i_atom]);
             }
+            if (Atom_Signal == Signal_point)
+                atoms_outfile.emplace_back(vector<double>{(double) i_poly + 1,
+                                                          pre_cell_atoms[i_atom](0, 0),
+                                                          pre_cell_atoms[i_atom](1, 0),
+                                                          pre_cell_atoms[i_atom](2, 0)});
         }
     }
+    cout << atoms_outfile.size() << endl;
     cout << (clock() - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << endl;
+
+    ofstream outdata;
+    outdata.precision(6);
+    outdata.open("test_1.dat", ios::out);
+    outdata << "Crystalline Cu atoms\n\n";
+    outdata << atoms_outfile.size() << " atoms\n";
+    outdata << cell_tot << " atom types\n";
+    outdata << fixed;
+    outdata << "0" << " " << "200" << " xlo xhi\n";
+    outdata << "0" << " " << "200" << " ylo yhi\n";
+    outdata << "0" << " " << "200" << " zlo zhi\n";
+    outdata << "\n";
+    outdata << "Atoms\n\n";
+    for (int number_atom = 0; number_atom < atoms_outfile.size(); ++number_atom) {
+        outdata << number_atom + 1 << " " << (int) atoms_outfile[number_atom][0];
+        for (int number_out = 1; number_out < 4; ++number_out) {
+            outdata << " " << atoms_outfile[number_atom][number_out];
+        }
+        outdata << endl;
+    }
+    outdata.close();
     return 0;
 }
 
@@ -128,12 +165,12 @@ int main() {
 inline double
 Distance_Point_Face(const Eigen::Ref<Eigen::Vector4d> &face_para, const Eigen::Ref<Eigen::Vector3d> &point) {
     return (face_para(0, 0) * point(0, 0) +
-            face_para(0, 1) * point(0, 1) +
-            face_para(0, 2) * point(0, 2) +
-            face_para(0, 3)) /
+            face_para(1, 0) * point(1, 0) +
+            face_para(2, 0) * point(2, 0) +
+            face_para(3, 0)) /
            sqrt(face_para(0, 0) * face_para(0, 0) +
-                face_para(0, 1) * face_para(0, 1) +
-                face_para(0, 2) * face_para(0, 2));
+                face_para(1, 0) * face_para(1, 0) +
+                face_para(2, 0) * face_para(2, 0));
 }
 
 inline Vector4d Face_Para(const Ref<Vector3d> &p_1, const Ref<Vector3d> &p_2, const Ref<Vector3d> &p_3) {
@@ -148,4 +185,11 @@ inline Vector4d Face_Para(const Ref<Vector3d> &p_1, const Ref<Vector3d> &p_2, co
     double d = -a * p_1(0, 0) - b * p_1(1, 0) - c * p_1(2, 0);
     data_return << a / norm, b / norm, c / norm, d / norm;
     return data_return;
+}
+
+inline bool Point_Signal(const Ref<Vector4d> &face_para, const Ref<Vector3d> &point) {
+    return (face_para(0, 0) * point(0, 0) +
+            face_para(1, 0) * point(1, 0) +
+            face_para(2, 0) * point(2, 0) +
+            face_para(3, 0)) > 0;
 }
