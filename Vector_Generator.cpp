@@ -142,7 +142,7 @@ int main() {
         Rtree.insert(make_pair(atoms_outfile[i_atom].first, i_atom));
     }
 
-    vector<int> atom_index;
+    vector<vector<int>> atom_index;
     for (int i_atom = 0; i_atom < atoms_outfile.size(); ++i_atom) {
         //不能用box方法，肯定会发生误判，box中两点最长为sqrt(3)*radius,肯定超过判断条件。
         //换做KNN筛选方法。
@@ -151,21 +151,44 @@ int main() {
         for (int i_near = 0; i_near < nearest_atom.size(); ++i_near) {
             if (bg::distance(nearest_atom[i_near].first, atoms_outfile[i_atom].first) < min_distance &&
                 bg::distance(nearest_atom[i_near].first, atoms_outfile[i_atom].first) > 0.0) {
-                atom_index.emplace_back(nearest_atom[i_near].second);
+                vector<int> back_index{i_atom, nearest_atom[i_near].second};
+                sort(back_index.begin(), back_index.end());
+                atom_index.emplace_back(back_index);
             }
         }
     }
 
-    sort(atom_index.begin(), atom_index.end());
-    atom_index.erase(unique(atom_index.begin(), atom_index.end()), atom_index.end());
-    for (int i_delete = atom_index.size() - 1; i_delete >= 0; i_delete = i_delete - 1) {
-        atoms_outfile.erase(atoms_outfile.begin() + atom_index[i_delete]);
+    clock_t check_pair = clock();
+    cout << "Un-Check Pair Number: " << atom_index.size() << '\n';
+    cout << "Select Atoms Time: " << (check_pair - Pre_Gener) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+
+    for (int i = 0; i < atom_index.size(); ++i) {
+        vector<int> initial_val = atom_index[i];
+        for (int j = 0; j < atom_index.size(); ++j) {
+            if (initial_val == atom_index[j] && i != j)
+                atom_index.erase(atom_index.begin() + j);
+        }
     }
 
-    clock_t select_atom = clock();
-    cout << "Number of Deleted Atoms: " << atom_index.size() << '\n';
-    cout << "Select Atoms Time: " << (select_atom - Pre_Gener) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+    vector<int> Delete_Index;
+    int back_index = -1;
+    for (int i_index = 0; i_index < atom_index.size(); ++i_index) {
+        if (back_index != atom_index[i_index][0])
+            Delete_Index.emplace_back(atom_index[i_index][0]);
+        back_index = atom_index[i_index][0];
+    }
+    sort(Delete_Index.begin(),Delete_Index.end());
+    cout << "Number of Deleted Atoms: " << Delete_Index.size() << '\n';
+    clock_t check_out = clock();
 
+    cout << "Check Atom-Couple Time: " << (check_out - check_pair) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+
+    for (int i_delete = Delete_Index.size() - 1; i_delete >= 0; i_delete = i_delete - 1) {
+        atoms_outfile.erase(atoms_outfile.begin() + Delete_Index[i_delete]);
+    }
+
+
+    clock_t starting_write = clock();
     ofstream outdata;
     outdata.precision(6);
     outdata.open("Selected_Atoms.dat", ios::out);
@@ -187,7 +210,7 @@ int main() {
     outdata.close();
 
     clock_t writing_data = clock();
-    cout << "Writing File Time: " << (writing_data - select_atom) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+    cout << "Writing File Time: " << (writing_data - starting_write) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
     cout << "Total Time: " << (clock() - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << endl;
 
     return 0;
