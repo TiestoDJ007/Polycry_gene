@@ -5,7 +5,6 @@
 #include "File_Func.h"
 #include <boost/algorithm/string.hpp>
 
-std::ifstream read_file;
 
 File_Func::File_Func() {
     cell_tot_ = 0;
@@ -48,24 +47,10 @@ File_Func::File_Func(const std::string &file_name_tess_, const std::string &file
     read_file.close();
 }
 
-File_Func::~File_Func() {
-
-}
+File_Func::~File_Func() = default;
 
 int File_Func::cell_tot() {
     return cell_tot_;
-}
-
-int File_Func::vertex_tot() {
-    return vertex_tot_;
-}
-
-int File_Func::face_tot() {
-    return face_tot_;
-}
-
-int File_Func::polyhedron_tot() {
-    return polyhedron_tot_;
 }
 
 std::vector<Eigen::Vector3d> File_Func::cell_position() {
@@ -122,7 +107,7 @@ std::vector<std::vector<int >> File_Func::face_vertices() {
                 getline(read_file, line_text);
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 std::vector<int> line_back;
-                for (int i_vertex = 2; i_vertex < line_text_split.size(); ++i_vertex) {
+                for (int i_vertex = 2; (int) i_vertex < line_text_split.size(); ++i_vertex) {
                     line_back.emplace_back(std::stoi(line_text_split[i_vertex]) - 1);
                 }
                 return_data.emplace_back(line_back);
@@ -147,7 +132,7 @@ std::vector<std::vector<int >> File_Func::poly_faces() {
                 getline(read_file, line_text);
                 std::vector<std::string> line_text_split = split_string(line_text, " ");
                 std::vector<int> line_back;
-                for (int i_face = 2; i_face < line_text_split.size(); ++i_face) {
+                for (int i_face = 2; (int) i_face < line_text_split.size(); ++i_face) {
                     line_back.emplace_back(std::abs(std::stoi(line_text_split[i_face])) - 1);
                 }
                 return_data.emplace_back(line_back);
@@ -176,7 +161,7 @@ std::vector<std::vector<int >> File_Func::poly_vertices() {
         getline(read_file, line_text);
         std::vector<std::string> line_text_split = split_string(line_text, " ");
         std::vector<int> line_back;
-        for (int i_ver = 1; i_ver < line_text_split.size(); ++i_ver) {
+        for (int i_ver = 1; (int) i_ver < line_text_split.size(); ++i_ver) {
             line_back.emplace_back(std::stoi(line_text_split[i_ver]) - 1);
         }
         return_data.emplace_back(line_back);

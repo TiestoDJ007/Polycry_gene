@@ -22,9 +22,8 @@ namespace bgi = boost::geometry::index;
 
 typedef bg::model::point<double, 3, bg::cs::cartesian> Point;
 typedef std::pair<Point, int> Point_Index;
-typedef bg::model::box<Point> Box;
 
-inline Vector4d Face_Para(const Ref<Vector3d> &point_1, const Ref<Vector3d> &point_2, const Ref<Vector3d> &point_3);
+inline Vector4d Face_Para(const Ref<Vector3d> &p_1, const Ref<Vector3d> &p_2, const Ref<Vector3d> &p_3);
 
 inline bool Point_Signal(const Ref<Vector4d> &face_para, const Ref<Vector3d> &point);
 
@@ -60,20 +59,20 @@ int main() {
     vector<Vector4d> poly_ori = voro_info.poly_ori();
 
     vector<Vector4d> face_para;
-    for (int i_face = 0; i_face < face_vertices.size(); ++i_face) {
-        face_para.emplace_back(Face_Para(vertex_position[face_vertices[i_face][0]],
-                                         vertex_position[face_vertices[i_face][1]],
-                                         vertex_position[face_vertices[i_face][2]]));
+    for (auto &face_vertice : face_vertices) {
+        face_para.emplace_back(Face_Para(vertex_position[face_vertice[0]],
+                                         vertex_position[face_vertice[1]],
+                                         vertex_position[face_vertice[2]]));
     }
 
     vector<Point_Index> atoms_outfile;
 
     for (int i_poly = 0; i_poly < cell_tot; ++i_poly) {
 
-        int cubic_size = 2 * poly_eqradius[i_poly] / lattice_parameter;
+        int cubic_size = (int) (2 * poly_eqradius[i_poly] / lattice_parameter);
 
         MatrixXd poly_vertex(poly_vertices[i_poly].size(), 3);
-        for (int i_vertex = 0; i_vertex < poly_vertices[i_poly].size(); ++i_vertex) {
+        for (int i_vertex = 0; (int) i_vertex < poly_vertices[i_poly].size(); ++i_vertex) {
             poly_vertex(i_vertex, 0) = vertex_position[poly_vertices[i_poly][i_vertex]](0, 0);
             poly_vertex(i_vertex, 1) = vertex_position[poly_vertices[i_poly][i_vertex]](1, 0);
             poly_vertex(i_vertex, 2) = vertex_position[poly_vertices[i_poly][i_vertex]](2, 0);
@@ -114,44 +113,44 @@ int main() {
         }
 
         VectorXi Signal_point(poly_faces[i_poly].size());
-        for (int i_face = 0; i_face < poly_faces[i_poly].size(); ++i_face) {
+        for (int i_face = 0; (int) i_face < poly_faces[i_poly].size(); ++i_face) {
             Signal_point.row(i_face) << Point_Signal(face_para[poly_faces[i_poly][i_face]],
                                                      cell_position[i_poly]);
         }
 
-        for (int i_atom = 0; i_atom < pre_cell_atoms.size(); ++i_atom) {
+        for (auto &pre_cell_atom : pre_cell_atoms) {
             VectorXi Atom_Signal(poly_faces[i_poly].size());
-            for (int i_face = 0; i_face < poly_faces[i_poly].size(); ++i_face) {
+            for (int i_face = 0; (int) i_face < poly_faces[i_poly].size(); ++i_face) {
                 Atom_Signal.row(i_face) << Point_Signal(face_para[poly_faces[i_poly][i_face]],
-                                                        pre_cell_atoms[i_atom]);
+                                                        pre_cell_atom);
             }
             if (Atom_Signal == Signal_point)
                 atoms_outfile.emplace_back(make_pair(Point(
-                        pre_cell_atoms[i_atom](0, 0),
-                        pre_cell_atoms[i_atom](1, 0),
-                        pre_cell_atoms[i_atom](2, 0)), i_poly + 1));
+                        pre_cell_atom(0, 0),
+                        pre_cell_atom(1, 0),
+                        pre_cell_atom(2, 0)), i_poly + 1));
         }
     }
     clock_t Pre_Gener = clock();
 
     cout << "Pre Generator Done" << '\n';
-    cout << "Pre Generator Time: " << (Pre_Gener - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+    cout << "Pre Generator Time: " << (double) (Pre_Gener - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
     cout << "Number of Pre Generator Atoms: " << atoms_outfile.size() << '\n';
     bgi::rtree<Point_Index, bgi::quadratic<16>> Rtree;
-    for (int i_atom = 0; i_atom < atoms_outfile.size(); ++i_atom) {
+    for (int i_atom = 0; (int) i_atom < atoms_outfile.size(); ++i_atom) {
         Rtree.insert(make_pair(atoms_outfile[i_atom].first, i_atom));
     }
 
     vector<vector<int>> atom_index;
-    for (int i_atom = 0; i_atom < atoms_outfile.size(); ++i_atom) {
+    for (int i_atom = 0; (int) i_atom < atoms_outfile.size(); ++i_atom) {
         //不能用box方法，肯定会发生误判，box中两点最长为sqrt(3)*radius,肯定超过判断条件。
         //换做KNN筛选方法。
         vector<Point_Index> nearest_atom;
         Rtree.query(bgi::nearest(atoms_outfile[i_atom].first, 5), std::back_inserter(nearest_atom));
-        for (int i_near = 0; i_near < nearest_atom.size(); ++i_near) {
-            if (bg::distance(nearest_atom[i_near].first, atoms_outfile[i_atom].first) < min_distance &&
-                bg::distance(nearest_atom[i_near].first, atoms_outfile[i_atom].first) > 0.0) {
-                vector<int> back_index{i_atom, nearest_atom[i_near].second};
+        for (auto &i_near : nearest_atom) {
+            if (bg::distance(i_near.first, atoms_outfile[i_atom].first) < min_distance &&
+                bg::distance(i_near.first, atoms_outfile[i_atom].first) > 0.0) {
+                vector<int> back_index{i_atom, i_near.second};
                 sort(back_index.begin(), back_index.end());
                 atom_index.emplace_back(back_index);
             }
@@ -160,11 +159,11 @@ int main() {
 
     clock_t check_pair = clock();
     cout << "Un-Check Pair Number: " << atom_index.size() << '\n';
-    cout << "Select Atoms Time: " << (check_pair - Pre_Gener) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+    cout << "Select Atoms Time: " << (double) (check_pair - Pre_Gener) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
 
-    for (int i = 0; i < atom_index.size(); ++i) {
+    for (int i = 0; i < (int) atom_index.size(); ++i) {
         vector<int> initial_val = atom_index[i];
-        for (int j = 0; j < atom_index.size(); ++j) {
+        for (int j = 0; (int) j < atom_index.size(); ++j) {
             if (initial_val == atom_index[j] && i != j)
                 atom_index.erase(atom_index.begin() + j);
         }
@@ -172,18 +171,19 @@ int main() {
 
     vector<int> Delete_Index;
     int back_index = -1;
-    for (int i_index = 0; i_index < atom_index.size(); ++i_index) {
-        if (back_index != atom_index[i_index][0])
-            Delete_Index.emplace_back(atom_index[i_index][0]);
-        back_index = atom_index[i_index][0];
+    for (auto &i_index : atom_index) {
+        if (back_index != i_index[0])
+            Delete_Index.emplace_back(i_index[0]);
+        back_index = i_index[0];
     }
-    sort(Delete_Index.begin(),Delete_Index.end());
+    sort(Delete_Index.begin(), Delete_Index.end());
     cout << "Number of Deleted Atoms: " << Delete_Index.size() << '\n';
     clock_t check_out = clock();
 
-    cout << "Check Atom-Couple Time: " << (check_out - check_pair) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
+    cout << "Check Atom-Couple Time: " << (double) (check_out - check_pair) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms"
+         << '\n';
 
-    for (int i_delete = Delete_Index.size() - 1; i_delete >= 0; i_delete = i_delete - 1) {
+    for (int i_delete = (int) Delete_Index.size() - 1; i_delete >= 0; i_delete = i_delete - 1) {
         atoms_outfile.erase(atoms_outfile.begin() + Delete_Index[i_delete]);
     }
 
@@ -201,7 +201,7 @@ int main() {
     outdata << "0" << " " << "200" << " zlo zhi\n";
     outdata << "\n";
     outdata << "Atoms\n\n";
-    for (int number_atom = 0; number_atom < atoms_outfile.size(); ++number_atom) {
+    for (int number_atom = 0; (int) number_atom < atoms_outfile.size(); ++number_atom) {
         outdata << number_atom + 1 << " " << atoms_outfile[number_atom].second;
         outdata << " " << atoms_outfile[number_atom].first.get<0>() << " " << atoms_outfile[number_atom].first.get<1>()
                 << " " << atoms_outfile[number_atom].first.get<2>() << "\n";
@@ -210,8 +210,9 @@ int main() {
     outdata.close();
 
     clock_t writing_data = clock();
-    cout << "Writing File Time: " << (writing_data - starting_write) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << '\n';
-    cout << "Total Time: " << (clock() - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << endl;
+    cout << "Writing File Time: " << (double) (writing_data - starting_write) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms"
+         << '\n';
+    cout << "Total Time: " << (double) (clock() - begin) * 1.0 / CLOCKS_PER_SEC * 1000 << " ms" << endl;
 
     return 0;
 }

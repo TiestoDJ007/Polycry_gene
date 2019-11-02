@@ -13,6 +13,7 @@
 
 class File_Func {
 private:
+    std::ifstream read_file;
     int cell_tot_;
     int vertex_tot_;
     int face_tot_;
@@ -30,12 +31,6 @@ public:
     ~File_Func();
 
     int cell_tot();
-
-    int vertex_tot();
-
-    int face_tot();
-
-    int polyhedron_tot();
 
     std::vector<Eigen::Vector3d> cell_position();
 
